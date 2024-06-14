@@ -10,11 +10,18 @@ class BoulderRoller extends StatefulWidget {
 }
 
 class BoulderRollerState extends State<BoulderRoller>
-    with SingleTickerProviderStateMixin {
-  late AnimationController animationController;
+    with TickerProviderStateMixin {
+  late AnimationController characterAnimationController;
+  late AnimationController mountainAnimationController;
   late FocusNode focusNode;
 
   late Animation<int> sisyphusFrame;
+  late Animation<int> mountainFrame;
+
+  final int walkFrames = 15;
+  final int mountainFrames = 60;
+  final double walkFps = 10;
+  final double mountainFps = 10;
   // late Animation<double> sisyphusX;
   // late Animation<double> sisyphusY;
 
@@ -22,12 +29,20 @@ class BoulderRollerState extends State<BoulderRoller>
   void initState() {
     super.initState();
 
-    animationController =
-        AnimationController(vsync: this, duration: const Duration(seconds: 8));
+    characterAnimationController = AnimationController(
+        vsync: this,
+        duration:
+            Duration(milliseconds: (1000 * walkFrames / walkFps).round()));
 
-    sisyphusFrame = TweenSequence<int>(
-            [TweenSequenceItem(tween: walkAnimation(), weight: 1)])
-        .animate(animationController);
+    mountainAnimationController = AnimationController(
+        vsync: this,
+        duration: Duration(
+            milliseconds: (1000 * mountainFrames / mountainFps).round()));
+
+    sisyphusFrame = IntTween(begin: 1, end: walkFrames)
+        .animate(characterAnimationController);
+    mountainFrame = IntTween(begin: 1, end: mountainFrames)
+        .animate(mountainAnimationController);
 
     focusNode = FocusNode();
 
@@ -36,34 +51,28 @@ class BoulderRollerState extends State<BoulderRoller>
 
   @override
   void dispose() {
-    animationController.dispose();
+    characterAnimationController.dispose();
     focusNode.dispose();
     super.dispose();
   }
-
-  walkAnimation() => TweenSequence([
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
-      ]);
 
   void _handleKeyEvent(RawKeyEvent event) {
     print(event.logicalKey);
     if (event is RawKeyDownEvent) {
       switch (event.logicalKey) {
         case (LogicalKeyboardKey.arrowRight):
-          if (!animationController.isAnimating) {
-            animationController.reset();
-            animationController.forward();
+          if (!characterAnimationController.isAnimating) {
+            characterAnimationController.reset();
+            characterAnimationController.repeat();
+            mountainAnimationController.reset();
+            mountainAnimationController.repeat();
           }
       }
     } else if (event is RawKeyUpEvent) {
       switch (event.logicalKey) {
         case (LogicalKeyboardKey.arrowRight):
-          animationController.stop();
+          characterAnimationController.stop();
+          mountainAnimationController.stop();
       }
     }
   }
@@ -72,6 +81,15 @@ class BoulderRollerState extends State<BoulderRoller>
   Widget build(BuildContext context) {
     double screenWidthMiddle = MediaQuery.of(context).size.width / 2;
     double screenHeightMiddle = MediaQuery.of(context).size.height / 2;
+
+    // Precache images to improve performance
+    for (int i = 1; i <= mountainFrames; i++) {
+      precacheImage(AssetImage("assets/Mountain$i.png"), context);
+    }
+    for (int i = 1; i <= walkFrames; i++) {
+      precacheImage(AssetImage("assets/Walk$i.png"), context);
+    }
+
     return Scaffold(
         backgroundColor: Colors.lightBlue,
         body: RawKeyboardListener(
@@ -81,21 +99,39 @@ class BoulderRollerState extends State<BoulderRoller>
             child: Stack(
               children: [
                 AnimatedBuilder(
-                  animation: animationController,
+                  animation: mountainAnimationController,
                   builder: (BuildContext context, Widget? child) {
                     return Positioned(
-                        left: screenWidthMiddle,
-                        top: screenHeightMiddle - 100,
-                        child: Transform.scale(
-                            scale: 2,
-                            child: Image(
-                              image: AssetImage(
-                                  "assets/Walk${sisyphusFrame.value}.png"),
-                              gaplessPlayback:
-                                  true, // if this value changes while the image is still loading it will continue to display the previous value
-                            )));
+                      left: screenWidthMiddle - 450,
+                      top: screenHeightMiddle - 250,
+                      child: Transform.scale(
+                        scale: 2,
+                        child: Image(
+                          image: AssetImage(
+                              "assets/Mountain${mountainFrame.value}.png"),
+                          gaplessPlayback: true,
+                        ),
+                      ),
+                    );
                   },
-                )
+                ),
+                AnimatedBuilder(
+                  animation: characterAnimationController,
+                  builder: (BuildContext context, Widget? child) {
+                    return Positioned(
+                      left: screenWidthMiddle,
+                      top: screenHeightMiddle - 100,
+                      child: Transform.scale(
+                        scale: 2,
+                        child: Image(
+                          image: AssetImage(
+                              "assets/Walk${sisyphusFrame.value}.png"),
+                          gaplessPlayback: true,
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ],
             )));
   }
