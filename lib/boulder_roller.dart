@@ -42,12 +42,12 @@ class BoulderRollerState extends State<BoulderRoller>
   }
 
   walkAnimation() => TweenSequence([
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 16), weight: 1),
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 16), weight: 1),
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 16), weight: 1),
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 16), weight: 1),
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 16), weight: 1),
-        TweenSequenceItem(tween: StepTween(begin: 1, end: 16), weight: 1),
+        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
+        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
+        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
+        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
+        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
+        TweenSequenceItem(tween: StepTween(begin: 1, end: 15), weight: 1),
       ]);
 
   void _handleKeyEvent(RawKeyEvent event) {
@@ -86,12 +86,14 @@ class BoulderRollerState extends State<BoulderRoller>
                     return Positioned(
                         left: screenWidthMiddle,
                         top: screenHeightMiddle - 100,
-                        child: Image(
-                          image: AssetImage(
-                              "assets/pixil-frame-${sisyphusFrame.value}.png"),
-                          gaplessPlayback:
-                              true, // if this value changes while the image is still loading it will continue to display the previous value
-                        ));
+                        child: Transform.scale(
+                            scale: 2,
+                            child: Image(
+                              image: AssetImage(
+                                  "assets/Walk${sisyphusFrame.value}.png"),
+                              gaplessPlayback:
+                                  true, // if this value changes while the image is still loading it will continue to display the previous value
+                            )));
                   },
                 )
               ],
