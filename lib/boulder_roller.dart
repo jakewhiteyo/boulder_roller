@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -11,17 +13,23 @@ class BoulderRoller extends StatefulWidget {
 
 class BoulderRollerState extends State<BoulderRoller>
     with TickerProviderStateMixin {
-  late AnimationController characterAnimationController;
+  late AnimationController characterWalkAnimationController;
+  late AnimationController characterFallAnimationController;
   late AnimationController mountainAnimationController;
   late FocusNode focusNode;
 
-  late Animation<int> sisyphusFrame;
+  late Animation<int> sisyphusWalkFrame;
+  late Animation<int> sisyphusFallFrame;
   late Animation<int> mountainFrame;
 
   final int walkFrames = 15;
+  final int fallFrames = 9;
   final int mountainFrames = 60;
-  final double walkFps = 10;
-  final double mountainFps = 10;
+  final double fps = 10;
+  final int fallDurationSeconds = 2;
+  Timer? reverseTimer;
+
+  bool isFalling = false;
   // late Animation<double> sisyphusX;
   // late Animation<double> sisyphusY;
 
@@ -29,30 +37,34 @@ class BoulderRollerState extends State<BoulderRoller>
   void initState() {
     super.initState();
 
-    characterAnimationController = AnimationController(
+    characterWalkAnimationController = AnimationController(
         vsync: this,
-        duration:
-            Duration(milliseconds: (1000 * walkFrames / walkFps).round()));
+        duration: Duration(milliseconds: (1000 * walkFrames / fps).round()));
+
+    characterFallAnimationController = AnimationController(
+        vsync: this,
+        duration: Duration(milliseconds: (1000 * fallFrames / fps).round()));
 
     mountainAnimationController = AnimationController(
         vsync: this,
-        duration: Duration(
-            milliseconds: (1000 * mountainFrames / mountainFps).round()));
+        duration:
+            Duration(milliseconds: (1000 * mountainFrames / fps).round()));
 
-    sisyphusFrame = IntTween(begin: 1, end: walkFrames)
-        .animate(characterAnimationController);
+    sisyphusWalkFrame = IntTween(begin: 1, end: walkFrames)
+        .animate(characterWalkAnimationController);
     mountainFrame = IntTween(begin: 1, end: mountainFrames)
         .animate(mountainAnimationController);
+    sisyphusFallFrame = IntTween(begin: 1, end: fallFrames)
+        .animate(characterFallAnimationController);
 
     focusNode = FocusNode();
-
-    //animationController.repeat();
   }
 
   @override
   void dispose() {
-    characterAnimationController.dispose();
+    characterWalkAnimationController.dispose();
     focusNode.dispose();
+    reverseTimer?.cancel();
     super.dispose();
   }
 
@@ -61,18 +73,36 @@ class BoulderRollerState extends State<BoulderRoller>
     if (event is RawKeyDownEvent) {
       switch (event.logicalKey) {
         case (LogicalKeyboardKey.arrowRight):
-          if (!characterAnimationController.isAnimating) {
-            characterAnimationController.reset();
-            characterAnimationController.repeat();
+          if (!characterWalkAnimationController.isAnimating) {
+            characterWalkAnimationController.reset();
+            characterWalkAnimationController.repeat();
             mountainAnimationController.reset();
             mountainAnimationController.repeat();
+            reverseTimer?.cancel();
           }
       }
     } else if (event is RawKeyUpEvent) {
       switch (event.logicalKey) {
         case (LogicalKeyboardKey.arrowRight):
-          characterAnimationController.stop();
+          // end walk-up animation, begin fall animation
+          characterWalkAnimationController.stop();
           mountainAnimationController.stop();
+          mountainAnimationController.reverse(
+              from: mountainAnimationController.value);
+          characterFallAnimationController.reset();
+          characterFallAnimationController.repeat();
+          setState(() {
+            isFalling = true;
+          });
+
+          // start timer for sisyphus to fall
+          reverseTimer = Timer(Duration(seconds: fallDurationSeconds), () {
+            characterFallAnimationController.stop();
+            mountainAnimationController.stop();
+            setState(() {
+              isFalling = false;
+            });
+          });
       }
     }
   }
@@ -89,7 +119,6 @@ class BoulderRollerState extends State<BoulderRoller>
     for (int i = 1; i <= walkFrames; i++) {
       precacheImage(AssetImage("assets/Walk$i.png"), context);
     }
-
     return Scaffold(
         backgroundColor: Colors.lightBlue,
         body: RawKeyboardListener(
@@ -116,7 +145,9 @@ class BoulderRollerState extends State<BoulderRoller>
                   },
                 ),
                 AnimatedBuilder(
-                  animation: characterAnimationController,
+                  animation: isFalling
+                      ? characterFallAnimationController
+                      : characterWalkAnimationController,
                   builder: (BuildContext context, Widget? child) {
                     return Positioned(
                       left: screenWidthMiddle,
@@ -124,8 +155,9 @@ class BoulderRollerState extends State<BoulderRoller>
                       child: Transform.scale(
                         scale: 2,
                         child: Image(
-                          image: AssetImage(
-                              "assets/Walk${sisyphusFrame.value}.png"),
+                          image: AssetImage(isFalling
+                              ? "assets/Fall-Animation${sisyphusFallFrame.value}.png"
+                              : "assets/Walk${sisyphusWalkFrame.value}.png"),
                           gaplessPlayback: true,
                         ),
                       ),
