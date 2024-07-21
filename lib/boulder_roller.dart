@@ -23,7 +23,7 @@ class BoulderRollerState extends State<BoulderRoller>
   late Animation<int> mountainFrame;
 
   final int walkFrames = 15;
-  final int fallFrames = 9;
+  final int fallFrames = 8;
   final int mountainFrames = 60;
   final double fps = 10;
   final int fallDurationSeconds = 2;
@@ -69,14 +69,13 @@ class BoulderRollerState extends State<BoulderRoller>
   }
 
   void _handleKeyEvent(RawKeyEvent event) {
-    print(event.logicalKey);
     if (event is RawKeyDownEvent) {
       switch (event.logicalKey) {
         case (LogicalKeyboardKey.arrowRight):
           if (!characterWalkAnimationController.isAnimating) {
             characterWalkAnimationController.reset();
             characterWalkAnimationController.repeat();
-            mountainAnimationController.reset();
+            // mountainAnimationController.reset();
             mountainAnimationController.repeat();
             reverseTimer?.cancel();
           }
@@ -87,8 +86,10 @@ class BoulderRollerState extends State<BoulderRoller>
           // end walk-up animation, begin fall animation
           characterWalkAnimationController.stop();
           mountainAnimationController.stop();
-          mountainAnimationController.reverse(
-              from: mountainAnimationController.value);
+          _startMountainReverseAnimation();
+
+          // mountainAnimationController.reverse(
+          //     from: mountainAnimationController.value);
           characterFallAnimationController.reset();
           characterFallAnimationController.repeat();
           setState(() {
@@ -105,6 +106,16 @@ class BoulderRollerState extends State<BoulderRoller>
           });
       }
     }
+  }
+
+  void _startMountainReverseAnimation() {
+    mountainAnimationController.reverse(
+        from: mountainAnimationController.value);
+    mountainAnimationController.addStatusListener((status) {
+      if (status == AnimationStatus.dismissed && isFalling) {
+        mountainAnimationController.reverse(from: 1.0);
+      }
+    });
   }
 
   @override
